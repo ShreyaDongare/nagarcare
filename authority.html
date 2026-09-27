@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Authority Dashboard{% endblock %}
+{% block content %}
+<div class="container page-wrap">
+  <div style="margin-bottom:2rem;">
+    <div class="stag"><i class="fas fa-building"></i> Authority Panel</div>
+    <h1 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;margin-bottom:4px;">Officer Dashboard</h1>
+    <p style="color:var(--ink3);">Department: <strong>{{ dept or 'All Departments' }}</strong></p>
+  </div>
+
+  <div class="kpi-grid" style="margin-bottom:1.5rem;">
+    <div class="kpi"><div class="kpi-icon" style="background:var(--blue2);color:var(--blue);"><i class="fas fa-inbox"></i></div><div class="kpi-val">{{ complaints|length }}</div><div class="kpi-lab">Assigned</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--amber2);color:#B07800;"><i class="fas fa-clock"></i></div><div class="kpi-val" style="color:#B07800;">{{ awaiting }}</div><div class="kpi-lab">Awaiting Action</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--purple2);color:var(--purple);"><i class="fas fa-spinner"></i></div><div class="kpi-val" style="color:var(--purple);">{{ in_progress }}</div><div class="kpi-lab">In Progress</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--green3);color:var(--green2);"><i class="fas fa-check-double"></i></div><div class="kpi-val" style="color:var(--green2);">{{ resolved }}</div><div class="kpi-lab">Resolved</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+      <h3 style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;">Complaint Queue</h3>
+      <input type="text" id="srch" placeholder="Search..." oninput="filterRows(this.value)" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Space Grotesk',sans-serif;font-size:0.85rem;outline:none;width:200px;">
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="data-table" id="authTbl">
+      <thead><tr><th>Ticket</th><th>Issue</th><th>Priority</th><th>Address</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for c in complaints %}
+      <tr>
+        <td><code style="font-size:0.78rem;color:var(--green2);background:var(--green3);padding:2px 7px;border-radius:5px;">{{ c[1] }}</code></td>
+        <td><strong>{{ c[2]|replace('_',' ')|title }}</strong></td>
+        <td><span class="p-{{ c[8] }}">{{ c[8]|title }}</span></td>
+        <td style="font-size:0.8rem;color:var(--ink3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c[6] or '—' }}</td>
+        <td>
+          <select class="ssel" data-ticket="{{ c[1] }}" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:0.78rem;outline:none;background:var(--bg);">
+            {% for s in ['submitted','assigned','in_progress','resolved','rejected'] %}
+            <option value="{{ s }}" {{ 'selected' if c[10]==s else '' }}>{{ s|replace('_',' ')|title }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td style="font-size:0.8rem;color:var(--ink3);">{{ c[11]|safe_date('%d %b') }}</td>
+        <td style="display:flex;gap:5px;">
+          <button class="btn btn-primary btn-xs" onclick="updStat('{{ c[1] }}',this)">Update</button>
+          <a href="/track/{{ c[1] }}" class="btn btn-outline btn-xs">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+async function updStat(tid,btn){
+  const sel=btn.closest('tr').querySelector('.ssel');
+  const note=prompt('Update note:')||'Updated by officer';
+  try{const r=await fetch('/api/update-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:tid,status:sel.value,note})});const d=await r.json();if(d.success)showToast('✅ Updated: '+sel.value.replace(/_/g,' '));else showToast('❌ '+(d.error||'Failed'));}catch{showToast('❌ Network error');}
+}
+function filterRows(q){document.querySelectorAll('#authTbl tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});}
+</script>
+{% endblock %}
+{% endblock %}

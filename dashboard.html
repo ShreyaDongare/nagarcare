@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge-card {
+  background: linear-gradient(135deg, #0A1628 0%, #0D1E35 100%);
+  color: white;
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.badge-emoji { font-size: 3rem; flex-shrink: 0; }
+.badge-info h3 { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 800; margin-bottom: 3px; }
+.badge-info p  { color: rgba(255,255,255,0.55); font-size: 0.85rem; }
+.pts-bar  { height: 7px; background: rgba(255,255,255,0.12); border-radius: 100px; margin-top: 9px; overflow: hidden; }
+.pts-fill { height: 100%; background: var(--green); border-radius: 100px; }
+.blevel {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px; border-radius: var(--radius-xs);
+  font-size: 0.84rem; background: var(--bg);
+  margin-bottom: 5px;
+}
+.blevel.cur { background: var(--green3); border: 1.5px solid rgba(0,200,150,0.25); }
+.blevel strong { font-size: 0.87rem; }
+@media(max-width: 900px) {
+  .dash-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page-wrap">
+
+  <div style="margin-bottom:2rem;">
+    <div class="stag"><i class="fas fa-th-large"></i> Dashboard</div>
+    <h1 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;margin-bottom:4px;">
+      Welcome back, {{ session.get('user_name', 'User') }}!
+    </h1>
+    <p style="color:var(--ink3);">Track your civic contributions and complaint status</p>
+  </div>
+
+  <!-- KPI CARDS -->
+  <!-- NOTE: in_progress_count and resolved_count are passed from Python, NOT computed in Jinja2 -->
+  <div class="kpi-grid" style="margin-bottom:2rem;">
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--green3);color:var(--green2);"><i class="fas fa-file-alt"></i></div>
+      <div class="kpi-val" style="color:var(--green2);">{{ complaints | length }}</div>
+      <div class="kpi-lab">Total Reports</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--blue2);color:var(--blue);"><i class="fas fa-spinner"></i></div>
+      <div class="kpi-val" style="color:var(--blue);">{{ in_progress_count }}</div>
+      <div class="kpi-lab">In Progress</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--green3);color:var(--green2);"><i class="fas fa-check-circle"></i></div>
+      <div class="kpi-val" style="color:var(--green2);">{{ resolved_count }}</div>
+      <div class="kpi-lab">Resolved</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--amber2);color:#B07800;"><i class="fas fa-star"></i></div>
+      <div class="kpi-val" style="color:#B07800;">
+        {% if user_stats %}{{ user_stats[0] | int }}{% else %}0{% endif %}
+      </div>
+      <div class="kpi-lab">Points Earned</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="dash-grid" style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;">
+
+    <!-- COMPLAINTS TABLE -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:800;">My Complaints</h3>
+        <a href="/report" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New Report</a>
+      </div>
+
+      {% if complaints %}
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Issue</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in complaints %}
+            <tr>
+              <td>
+                <code style="font-size:0.79rem;color:var(--green2);background:var(--green3);padding:3px 8px;border-radius:6px;">
+                  {{ c[1] }}
+                </code>
+              </td>
+              <td><strong>{{ c[2] | replace('_',' ') | title }}</strong></td>
+              <td><span class="p-{{ c[8] }}">{{ c[8] | title }}</span></td>
+              <td><span class="s-{{ c[10] }}">{{ c[10] | replace('_',' ') | title }}</span></td>
+              <!-- FIX: use safe_date filter which handles both str and datetime -->
+              <td style="color:var(--ink3);font-size:0.83rem;">
+                {{ c[11] | safe_date('%d %b %Y') }}
+              </td>
+              <td>
+                <a href="/track/{{ c[1] }}" class="btn btn-outline btn-xs">Track</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div style="text-align:center;padding:3rem;color:var(--ink3);">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📋</div>
+        <p style="font-weight:600;margin-bottom:0.5rem;">No reports yet.</p>
+        <p style="font-size:0.88rem;">Be a Civic Hero!</p>
+        <a href="/report" class="btn btn-primary btn-sm" style="margin-top:1rem;">
+          <i class="fas fa-plus"></i> New Report
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- SIDEBAR -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+      {% if user_stats %}
+
+        {# --- FIX 1: cast to int safely --- #}
+        {% set pts   = user_stats[0] | int %}
+        {% set badge = user_stats[1] | string | lower %}
+
+        {# --- FIX 2: badge icon / label lookup without .get() --- #}
+        {% if badge == 'platinum' %}
+          {% set bico = '💎' %}{% set blab = 'Platinum Hero' %}
+        {% elif badge == 'gold' %}
+          {% set bico = '🥇' %}{% set blab = 'Gold Champion' %}
+        {% elif badge == 'silver' %}
+          {% set bico = '🥈' %}{% set blab = 'Silver Sentinel' %}
+        {% elif badge == 'bronze' %}
+          {% set bico = '🥉' %}{% set blab = 'Bronze Guardian' %}
+        {% else %}
+          {% set bico = '🌱' %}{% set blab = 'Newcomer' %}
+        {% endif %}
+
+        {# --- FIX 3: bar width — no [list]|min, no division ambiguity --- #}
+        {% if pts >= 50 %}
+          {% set bar = 100 %}
+          {% set nxt = 'MAX — Top Level!' %}
+        {% elif pts >= 20 %}
+          {% set bar = pts * 2 %}
+          {% set nxt = '50' %}
+        {% elif pts >= 10 %}
+          {% set bar = pts * 2 %}
+          {% set nxt = '20' %}
+        {% elif pts >= 5 %}
+          {% set bar = pts * 4 %}
+          {% set nxt = '10' %}
+        {% else %}
+          {% set bar = pts * 4 %}
+          {% set nxt = '5' %}
+        {% endif %}
+        {# clamp to 100 #}
+        {% if bar > 100 %}{% set bar = 100 %}{% endif %}
+
+        <!-- BADGE CARD -->
+        <div class="badge-card">
+          <div class="badge-emoji">{{ bico }}</div>
+          <div class="badge-info" style="flex:1;">
+            <h3>{{ blab }}</h3>
+            <p>{{ pts }} civic points earned</p>
+            <div class="pts-bar">
+              <div class="pts-fill" style="width:{{ bar }}%;"></div>
+            </div>
+            <p style="font-size:0.74rem;margin-top:6px;opacity:0.5;">
+              Next level at {{ nxt }} points
+            </p>
+          </div>
+        </div>
+
+      {% endif %}
+
+      <!-- BADGE LEVELS LIST -->
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-size:0.95rem;font-weight:800;margin-bottom:0.9rem;">
+          <i class="fas fa-trophy" style="color:var(--amber);margin-right:7px;"></i>Badge Levels
+        </h4>
+
+        {# --- FIX 4: loop over list of tuples — no dict.get(), no complex filter --- #}
+        {% set levels = [
+          ('🌱', 'newcomer',  'Newcomer',         '0 pts'),
+          ('🥉', 'bronze',    'Bronze Guardian',  '5 reports'),
+          ('🥈', 'silver',    'Silver Sentinel',  '10 reports'),
+          ('🥇', 'gold',      'Gold Champion',    '20 reports'),
+          ('💎', 'platinum',  'Platinum Hero',    '50 reports')
+        ] %}
+
+        {% for ico, key, name, label in levels %}
+          {% set is_cur = user_stats and (user_stats[1] | string | lower) == key %}
+          <div class="blevel {{ 'cur' if is_cur else '' }}">
+            <span style="font-size:1.15rem;">{{ ico }}</span>
+            <div>
+              <strong>{{ name }}</strong>
+              <div style="font-size:0.74rem;color:var(--ink3);">{{ label }}</div>
+            </div>
+            {% if is_cur %}
+              <span class="chip chip-green" style="margin-left:auto;font-size:0.68rem;">You</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- QUICK TRACK -->
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-size:0.95rem;font-weight:800;margin-bottom:0.9rem;">
+          <i class="fas fa-search" style="color:var(--blue);margin-right:7px;"></i>Quick Track
+        </h4>
+        <input
+          type="text" id="qtrack"
+          placeholder="Enter Ticket ID..."
+          style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+                 font-family:'Space Grotesk',sans-serif;outline:none;margin-bottom:8px;font-size:0.9rem;"
+        >
+        <button
+          class="btn btn-blue btn-sm"
+          style="width:100%;"
+          onclick="var v=document.getElementById('qtrack').value.trim();if(v)window.location='/track/'+v;"
+        >
+          <i class="fas fa-search"></i> Track
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Live Map{% endblock %}
+{% block extra_css %}<style>
+#mainMap{height:calc(100vh - 62px);}
+.map-panel{position:absolute;z-index:1000;background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow2);}
+.filter-panel{top:14px;left:14px;padding:1rem;min-width:210px;}
+.stats-panel{top:14px;right:14px;padding:1rem;min-width:170px;}
+.legend-panel{bottom:24px;left:14px;padding:0.75rem 1rem;}
+.flt-btn{display:block;width:100%;padding:7px 12px;border-radius:var(--radius-xs);border:1.5px solid var(--border);background:var(--bg);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;margin-bottom:5px;}
+.flt-btn:hover,.flt-btn.on{border-color:var(--green);background:var(--green3);color:var(--green2);}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.83rem;}
+.stat-row:last-child{border:none;}
+.ldot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;}
+</style>{% endblock %}
+{% block content %}
+<div style="position:relative;">
+<div id="mainMap"></div>
+
+<div class="map-panel filter-panel">
+  <h4 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:0.9rem;margin-bottom:0.75rem;"><i class="fas fa-filter" style="color:var(--green);margin-right:6px;"></i>Filter</h4>
+  <button class="flt-btn on" onclick="filterMap('all',this)">🗺️ All Issues</button>
+  <button class="flt-btn" onclick="filterMap('pothole',this)">🕳️ Potholes</button>
+  <button class="flt-btn" onclick="filterMap('garbage',this)">🗑️ Garbage</button>
+  <button class="flt-btn" onclick="filterMap('streetlight',this)">💡 Streetlights</button>
+  <button class="flt-btn" onclick="filterMap('water_leakage',this)">💧 Water Leaks</button>
+  <button class="flt-btn" onclick="filterMap('sewage',this)">🚰 Sewage</button>
+  <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+  <button class="flt-btn" id="hmBtn" onclick="toggleHmap()">🔥 Show Heatmap</button>
+</div>
+
+<div class="map-panel stats-panel">
+  <h4 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:0.9rem;margin-bottom:0.75rem;"><i class="fas fa-chart-bar" style="color:var(--blue);margin-right:6px;"></i>Stats</h4>
+  <div class="stat-row"><span>Total</span><strong id="stTotal">—</strong></div>
+  <div class="stat-row"><span>Resolved</span><strong id="stRes" style="color:var(--green2);">—</strong></div>
+  <div class="stat-row"><span>High Priority</span><strong id="stHigh" style="color:var(--red);">—</strong></div>
+  <div class="stat-row"><span>In Progress</span><strong id="stProg" style="color:var(--purple);">—</strong></div>
+</div>
+
+<div class="map-panel legend-panel">
+  <div style="display:flex;gap:1.25rem;font-size:0.78rem;flex-wrap:wrap;">
+    <span><span class="ldot" style="background:var(--red);"></span>High</span>
+    <span><span class="ldot" style="background:var(--amber);"></span>Medium</span>
+    <span><span class="ldot" style="background:var(--green);"></span>Resolved</span>
+    <span><span class="ldot" style="background:var(--blue);"></span>Submitted</span>
+  </div>
+</div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+{% block extra_js %}
+<script>
+const map=L.map('mainMap').setView([19.8762,75.3433],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap | NagarCare'}).addTo(map);
+let allMk=[],hlayer=null,hOn=false;
+const PC={high:'#FF4560',medium:'#FFB020',low:'#00C896',critical:'#7C5CFC'};
+const SC={submitted:'#4A7CFF',assigned:'#FFB020',in_progress:'#7C5CFC',resolved:'#00C896'};
+
+async function load(){
+  try{
+    const [comps,hmData]=await Promise.all([fetch('/api/complaints').then(r=>r.json()),fetch('/api/heatmap').then(r=>r.json())]);
+    comps.forEach(c=>{
+      const col=PC[c.priority]||'#888';
+      const ico=L.divIcon({className:'',html:`<div style="width:13px;height:13px;background:${col};border:2.5px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>`,iconSize:[13,13],iconAnchor:[6,6]});
+      const m=L.marker([c.lat,c.lng],{icon:ico});
+      m.issueType=c.issue_type;
+      m.bindPopup(`<div style="font-family:'Space Grotesk',sans-serif;min-width:190px;"><b style="font-size:0.9rem;">${c.issue_type.replace(/_/g,' ').toUpperCase()}</b><br><span style="background:${col}22;color:${col};padding:2px 8px;border-radius:100px;font-size:0.73rem;font-weight:700;">${c.priority.toUpperCase()}</span> <span style="background:${SC[c.status]||'#eee'}22;color:${SC[c.status]||'#888'};padding:2px 8px;border-radius:100px;font-size:0.73rem;font-weight:700;">${c.status.toUpperCase()}</span><br><a href="/track/${c.ticket_id}" style="color:var(--green2);font-weight:700;font-size:0.8rem;">🎫 ${c.ticket_id}</a><br><span style="font-size:0.74rem;color:#888;">📅 ${c.date}</span></div>`);
+      m.addTo(map);allMk.push(m);
+    });
+    document.getElementById('stTotal').textContent=comps.length;
+    document.getElementById('stRes').textContent=comps.filter(c=>c.status==='resolved').length;
+    document.getElementById('stHigh').textContent=comps.filter(c=>c.priority==='high').length;
+    document.getElementById('stProg').textContent=comps.filter(c=>c.status==='in_progress').length;
+    hlayer=L.heatLayer(hmData.map?hmData.map(p=>[p.lat,p.lng,p.weight]):[],[{radius:35,blur:20,gradient:{0.2:'#4A7CFF',0.5:'#FFB020',0.8:'#FF4560',1:'#7C5CFC'}}]);
+  }catch{addDemo();}
+}
+
+function addDemo(){
+  const d=[{ticket_id:'NC001',issue_type:'pothole',lat:19.8762,lng:75.3433,priority:'high',status:'in_progress',date:'2024-01-01'},{ticket_id:'NC002',issue_type:'garbage',lat:19.879,lng:75.345,priority:'medium',status:'assigned',date:'2024-01-02'},{ticket_id:'NC003',issue_type:'streetlight',lat:19.874,lng:75.341,priority:'medium',status:'submitted',date:'2024-01-03'},{ticket_id:'NC004',issue_type:'water_leakage',lat:19.88,lng:75.346,priority:'high',status:'submitted',date:'2024-01-04'},{ticket_id:'NC005',issue_type:'sewage',lat:19.878,lng:75.344,priority:'high',status:'in_progress',date:'2024-01-05'}];
+  document.getElementById('stTotal').textContent='143';document.getElementById('stRes').textContent='66';document.getElementById('stHigh').textContent='42';document.getElementById('stProg').textContent='22';
+  d.forEach(c=>{const col=PC[c.priority];const ico=L.divIcon({className:'',html:`<div style="width:13px;height:13px;background:${col};border:2.5px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>`,iconSize:[13,13],iconAnchor:[6,6]});const m=L.marker([c.lat,c.lng],{icon:ico});m.issueType=c.issue_type;m.bindPopup(`<b>${c.issue_type}</b><br>${c.priority} · ${c.status}`);m.addTo(map);allMk.push(m);});
+  hlayer=L.heatLayer(d.map(c=>[c.lat,c.lng,c.priority==='high'?1:0.5]),{radius:35,blur:20});
+}
+
+function filterMap(type,btn){
+  document.querySelectorAll('.flt-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  allMk.forEach(m=>type==='all'||m.issueType===type?m.addTo(map):map.removeLayer(m));
+}
+function toggleHmap(){
+  if(!hlayer)return;hOn=!hOn;
+  if(hOn){hlayer.addTo(map);document.getElementById('hmBtn').textContent='🔥 Hide Heatmap';document.getElementById('hmBtn').classList.add('on');}
+  else{map.removeLayer(hlayer);document.getElementById('hmBtn').textContent='🔥 Show Heatmap';document.getElementById('hmBtn').classList.remove('on');}
+}
+load();
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block extra_css %}
+<style>
+.login-wrap {
+  min-height: calc(100vh - 62px);
+  display: grid;
+  grid-template-columns: 400px 1fr;
+}
+/* LEFT dark panel */
+.ll {
+  background: linear-gradient(160deg, #0A1628 0%, #0D1E35 60%, #0A1628 100%);
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.ll-orb1 {
+  position: absolute; width: 300px; height: 300px;
+  background: rgba(0,200,150,0.08); border-radius: 50%;
+  top: -80px; left: -80px; filter: blur(70px); pointer-events: none;
+}
+.ll-orb2 {
+  position: absolute; width: 220px; height: 220px;
+  background: rgba(74,124,255,0.06); border-radius: 50%;
+  bottom: 40px; right: -50px; filter: blur(60px); pointer-events: none;
+}
+.ll-logo { display: flex; align-items: center; gap: 11px; margin-bottom: 2rem; position: relative; z-index: 1; }
+.ll-icon {
+  width: 44px; height: 44px; background: var(--green); border-radius: 13px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+  box-shadow: 0 0 28px rgba(0,200,150,0.4);
+}
+.ll-name {
+  font-family: 'Outfit', sans-serif; font-size: 1.9rem; font-weight: 900;
+  background: linear-gradient(135deg, #fff, var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+/* Role selection cards on left */
+.rcards { display: flex; flex-direction: column; gap: 9px; position: relative; z-index: 1; }
+.rcard {
+  display: flex; align-items: center; gap: 11px;
+  padding: 13px 14px; border-radius: 13px;
+  border: 1.5px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer; transition: all 0.2s;
+}
+.rcard:hover { border-color: rgba(0,200,150,0.3); background: rgba(0,200,150,0.05); }
+.rcard.on  { border-color: var(--green); background: rgba(0,200,150,0.09); box-shadow: 0 0 18px rgba(0,200,150,0.1); }
+.rav  { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; }
+.rname { font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 700; color: white; margin-bottom: 1px; }
+.rdesc { font-size: 0.72rem; color: rgba(255,255,255,0.42); }
+.rcard.on .rname { color: var(--green); }
+.rck  {
+  margin-left: auto; width: 19px; height: 19px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.13);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; flex-shrink: 0;
+  color: transparent; transition: all 0.2s;
+}
+.rcard.on .rck { background: var(--green); border-color: var(--green); color: white; }
+/* Demo box */
+.demo-box {
+  margin-top: auto; padding: 0.9rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 11px;
+  font-size: 0.74rem; color: rgba(255,255,255,0.42);
+  line-height: 2; position: relative; z-index: 1;
+}
+.demo-box strong { color: rgba(255,255,255,0.68); display: block; margin-bottom: 3px; font-size: 0.78rem; }
+
+/* RIGHT form panel */
+.lr  { display: flex; align-items: center; justify-content: center; padding: 2.5rem; background: var(--bg); }
+.lf  { width: 100%; max-width: 370px; }
+/* Role pill */
+.rpill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 13px; border-radius: 100px;
+  font-size: 0.75rem; font-weight: 700; margin-bottom: 0.9rem;
+  transition: all 0.25s;
+}
+.rp-c { background: var(--green3);  color: var(--green2); }
+.rp-a { background: var(--red2);    color: var(--red); }
+.rp-o { background: var(--blue2);   color: var(--blue); }
+/* Title */
+.ftitle { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 900; color: var(--ink); margin-bottom: 3px; }
+.fsub   { color: var(--ink3); font-size: 0.88rem; margin-bottom: 1.75rem; line-height: 1.55; }
+/* Role tabs row */
+.rtabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 11px; padding: 5px; margin-bottom: 1.5rem;
+}
+.rtab {
+  padding: 8px 5px; border-radius: 8px; text-align: center;
+  cursor: pointer; border: none; background: transparent;
+  color: var(--ink3); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.76rem; font-weight: 700;
+  transition: all 0.18s;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.rtab .ti { font-size: 1.05rem; }
+.rtab:hover { color: var(--ink); }
+/* FIX: use single distinct class names per role to avoid specificity conflicts */
+.rtab-c-active { background: var(--green3); color: var(--green2); }
+.rtab-a-active { background: var(--red2);   color: var(--red); }
+.rtab-o-active { background: var(--blue2);  color: var(--blue); }
+/* Password wrapper */
+.pw-wrap  { position: relative; }
+.pw-wrap input { padding-right: 42px; }
+.eye-btn  {
+  position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--ink3); cursor: pointer; font-size: 0.88rem; padding: 4px;
+}
+/* Submit button */
+.subbtn {
+  width: 100%; padding: 13px; border-radius: 100px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.95rem;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 4px; transition: all 0.22s;
+}
+.sb-c { background: var(--green); color: white; box-shadow: 0 6px 22px rgba(0,200,150,0.25); }
+.sb-a { background: var(--red);   color: white; box-shadow: 0 6px 22px rgba(255,69,96,0.22); }
+.sb-o { background: var(--blue);  color: white; box-shadow: 0 6px 22px rgba(74,124,255,0.22); }
+.subbtn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+.divline {
+  display: flex; align-items: center; gap: 10px;
+  margin: 1.2rem 0; color: var(--ink3); font-size: 0.76rem;
+}
+.divline::before, .divline::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.lang-note { text-align: center; margin-top: 0.9rem; font-size: 0.79rem; color: var(--ink3); }
+.lang-note a { color: var(--green); font-weight: 700; text-decoration: none; }
+/* Flash messages */
+.fmsg {
+  padding: 11px 14px; border-radius: 9px;
+  font-size: 0.86rem; font-weight: 600; margin-bottom: 1rem;
+}
+.fmsg-err { background: var(--red2);   color: var(--red); }
+.fmsg-ok  { background: var(--green3); color: var(--green2); }
+/* Dept field hidden by default */
+#deptFg { display: none; }
+
+@media(max-width: 760px) {
+  .login-wrap { grid-template-columns: 1fr; }
+  .ll { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+
+  <!-- ═══ LEFT PANEL ═══ -->
+  <div class="ll">
+    <div class="ll-orb1"></div>
+    <div class="ll-orb2"></div>
+
+    <div class="ll-logo">
+      <div class="ll-icon">🏙️</div>
+      <div class="ll-name">NagarCare</div>
+    </div>
+
+    <div class="rcards">
+      <div class="rcard on" id="vc-citizen" onclick="setRole('citizen')">
+        <div class="rav" style="background:rgba(0,200,150,0.15);color:var(--green);">👤</div>
+        <div>
+          <div class="rname">Citizen</div>
+          <!-- FIX: use &amp; instead of & in HTML attributes/text -->
+          <div class="rdesc">Report &amp; track civic issues</div>
+        </div>
+        <div class="rck">&#10003;</div>
+      </div>
+      <div class="rcard" id="vc-admin" onclick="setRole('admin')">
+        <div class="rav" style="background:rgba(255,69,96,0.15);color:var(--red);">🛡️</div>
+        <div>
+          <div class="rname">Admin</div>
+          <div class="rdesc">Manage all complaints &amp; analytics</div>
+        </div>
+        <div class="rck">&#10003;</div>
+      </div>
+      <div class="rcard" id="vc-authority" onclick="setRole('authority')">
+        <div class="rav" style="background:rgba(74,124,255,0.15);color:var(--blue);">🏢</div>
+        <div>
+          <div class="rname">Authority / Officer</div>
+          <div class="rdesc">Department-level handling</div>
+        </div>
+        <div class="rck">&#10003;</div>
+      </div>
+    </div>
+
+    <div class="demo-box">
+      <strong>Demo Accounts</strong>
+      Citizen: rahul@test.com &#x2192; test123<br>
+      Admin: admin@nagarcare.in &#x2192; admin123<br>
+      Officer: officer@nagarcare.in &#x2192; officer123
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <div class="lr">
+    <div class="lf">
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="fmsg {{ 'fmsg-err' if cat == 'error' else 'fmsg-ok' }}">
+              <i class="fas {{ 'fa-circle-xmark' if cat == 'error' else 'fa-circle-check' }}"></i>
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Role indicator pill -->
+      <div class="rpill rp-c" id="rPill">
+        <span id="rPillIcon">👤</span>
+        <span id="rPillText">Citizen Login</span>
+      </div>
+
+      <h1 class="ftitle" id="fTitle">Welcome Back</h1>
+      <p class="fsub"   id="fSub">Login to report and track civic issues in your city</p>
+
+      <!-- Role tab switcher -->
+      <div class="rtabs">
+        <button class="rtab rtab-c-active" id="rt-citizen" onclick="setRole('citizen')">
+          <span class="ti">👤</span>Citizen
+        </button>
+        <button class="rtab" id="rt-admin" onclick="setRole('admin')">
+          <span class="ti">🛡️</span>Admin
+        </button>
+        <button class="rtab" id="rt-authority" onclick="setRole('authority')">
+          <span class="ti">🏢</span>Authority
+        </button>
+      </div>
+
+      <form method="POST" action="/login">
+        <input type="hidden" name="role" id="roleInput" value="citizen">
+
+        <!-- Department selector (authority only) -->
+        <div class="fg" id="deptFg">
+          <label>Department</label>
+          <select name="department">
+            <option value="">&#8212; Select your department &#8212;</option>
+            <option value="Public Works Department">Public Works Department</option>
+            <option value="Municipal Corporation">Municipal Corporation</option>
+            <option value="Electricity Board">Electricity Board</option>
+            <option value="Water Supply Department">Water Supply Department</option>
+            <!-- FIX: & must be &amp; inside HTML -->
+            <option value="Sewage &amp; Sanitation Board">Sewage &amp; Sanitation Board</option>
+            <option value="Horticulture Department">Horticulture Department</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Email Address</label>
+          <input type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+        </div>
+
+        <div class="fg">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" name="password" id="pwdIn" required placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password">
+            <button type="button" class="eye-btn" onclick="togglePwd()">
+              <i class="fas fa-eye" id="eyeIco"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- FIX: fa-right-to-bracket requires FA 6+ free — use fa-sign-in-alt as safer fallback -->
+        <button type="submit" class="subbtn sb-c" id="subBtn">
+          <i class="fas fa-sign-in-alt"></i>
+          <span id="subTxt">Login as Citizen</span>
+        </button>
+      </form>
+
+      <div class="divline"><span>new to nagarcare?</span></div>
+      <a href="/register" class="btn btn-outline" style="width:100%;justify-content:center;">
+        Create Free Account
+      </a>
+
+      <div class="lang-note">
+        Language: <strong>{{ session.get('lang','en') | upper }}</strong> &#183;
+        <a href="/select-language">Change Language 🌐</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var RC = {
+  citizen: {
+    pill: 'rp-c', pillIcon: '👤', pillText: 'Citizen Login',
+    title: 'Welcome Back',
+    sub:   'Login to report and track civic issues in your city',
+    btn:   'sb-c', btxt:  'Login as Citizen',
+    tab:   'rtab-c-active', dept: false,
+    vc:    'vc-citizen', rt: 'rt-citizen'
+  },
+  admin: {
+    pill: 'rp-a', pillIcon: '🛡️', pillText: 'Admin Portal',
+    title: 'Admin Access',
+    sub:   'Manage all complaints, analytics and city-wide operations',
+    btn:   'sb-a', btxt:  'Login as Admin',
+    tab:   'rtab-a-active', dept: false,
+    vc:    'vc-admin', rt: 'rt-admin'
+  },
+  authority: {
+    pill: 'rp-o', pillIcon: '🏢', pillText: 'Officer Portal',
+    title: 'Authority Login',
+    sub:   'Handle department complaints assigned to your team',
+    btn:   'sb-o', btxt:  'Login as Authority',
+    tab:   'rtab-o-active', dept: true,
+    vc:    'vc-authority', rt: 'rt-authority'
+  }
+};
+
+var cur = 'citizen';
+
+function setRole(r) {
+  if (!RC[r]) return;
+  cur = r;
+  var c = RC[r];
+
+  // update pill
+  var pill = document.getElementById('rPill');
+  pill.className = 'rpill ' + c.pill;
+  document.getElementById('rPillIcon').textContent = c.pillIcon;
+  document.getElementById('rPillText').textContent = c.pillText;
+
+  // update heading
+  document.getElementById('fTitle').textContent = c.title;
+  document.getElementById('fSub').textContent   = c.sub;
+
+  // update hidden input
+  document.getElementById('roleInput').value = r;
+
+  // update submit button
+  var sb = document.getElementById('subBtn');
+  sb.className = 'subbtn ' + c.btn;
+  document.getElementById('subTxt').textContent = c.btxt;
+
+  // show/hide dept field
+  document.getElementById('deptFg').style.display = c.dept ? 'block' : 'none';
+
+  // update left-side visual cards
+  var roles = ['citizen', 'admin', 'authority'];
+  roles.forEach(function(x) {
+    document.getElementById('vc-' + x).classList.toggle('on', x === r);
+  });
+
+  // update top tabs — FIX: clear all active classes before adding new one
+  var tabActiveClasses = ['rtab-c-active', 'rtab-a-active', 'rtab-o-active'];
+  roles.forEach(function(x) {
+    var el = document.getElementById('rt-' + x);
+    tabActiveClasses.forEach(function(cls) { el.classList.remove(cls); });
+    if (x === r) { el.classList.add(c.tab); }
+  });
+}
+
+function togglePwd() {
+  var i = document.getElementById('pwdIn');
+  var e = document.getElementById('eyeIco');
+  if (i.type === 'password') {
+    i.type = 'text';
+    e.className = 'fas fa-eye-slash';
+  } else {
+    i.type = 'password';
+    e.className = 'fas fa-eye';
+  }
+}
+</script>
+{% endblock %}

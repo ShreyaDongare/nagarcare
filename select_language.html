@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NagarCare — Select Language</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--green:#00C896;--green2:#00A87A;--blue:#4A7CFF;--ink:#0A0F1E;--muted:#8892A8;--border:rgba(10,15,30,0.1);}
+body{background:linear-gradient(135deg,#F0F7FF 0%,#E8F5F0 50%,#F5F0FF 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;font-family:'Space Grotesk',sans-serif;}
+.card{background:white;border:1px solid var(--border);border-radius:24px;padding:2.5rem;width:100%;max-width:580px;box-shadow:0 20px 60px rgba(10,15,30,0.1);}
+.top{text-align:center;margin-bottom:2rem;}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:1.5rem;}
+.logo-icon{width:52px;height:52px;background:var(--green);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 8px 24px rgba(0,200,150,0.3);}
+.logo-name{font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:900;color:var(--ink);}
+.logo-name span{color:var(--green);}
+h2{font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.sub{font-size:0.88rem;color:var(--muted);line-height:1.6;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2rem;}
+.lang-btn{border:2px solid var(--border);border-radius:14px;padding:14px 10px;cursor:pointer;text-align:center;background:white;transition:all 0.2s;font-family:'Space Grotesk',sans-serif;}
+.lang-btn:hover{border-color:var(--green);background:rgba(0,200,150,0.04);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,200,150,0.12);}
+.lang-btn.sel{border-color:var(--green);background:rgba(0,200,150,0.06);box-shadow:0 4px 16px rgba(0,200,150,0.15);}
+.lang-btn.sel .lname{color:var(--green2);}
+.lflag{font-size:1.8rem;display:block;margin-bottom:6px;}
+.lname{font-size:0.85rem;font-weight:700;color:var(--ink);display:block;margin-bottom:2px;}
+.lnative{font-size:0.78rem;color:var(--muted);display:block;}
+.check{display:none;width:18px;height:18px;border-radius:50%;background:var(--green);color:white;font-size:0.7rem;align-items:center;justify-content:center;margin:0 auto 4px;}
+.lang-btn.sel .check{display:flex;}
+.continue-btn{width:100%;padding:15px;border-radius:100px;background:var(--green);color:white;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1rem;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.25s;box-shadow:0 8px 28px rgba(0,200,150,0.3);}
+.continue-btn:hover{background:var(--green2);transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,200,150,0.4);}
+.back{text-align:center;margin-top:1rem;}
+.back a{color:var(--muted);font-size:0.85rem;text-decoration:none;}
+.back a:hover{color:var(--green);}
+.note{text-align:center;font-size:0.78rem;color:var(--muted);margin-top:1rem;padding:10px;background:#F8F9FC;border-radius:10px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <div class="logo-row">
+      <div class="logo-icon">🏙️</div>
+      <div class="logo-name">Nagar<span>Care</span></div>
+    </div>
+    <h2>Choose Your Language</h2>
+    <p class="sub">Select your preferred language to continue<br>अपनी भाषा चुनें · आपली भाषा निवडा · ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ</p>
+  </div>
+
+  <form method="POST" id="langForm">
+    <input type="hidden" name="lang" id="langInput" value="en">
+    <div class="grid">
+      <label class="lang-btn sel" onclick="pick('en',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🇬🇧</span>
+        <span class="lname">English</span>
+        <span class="lnative">English</span>
+      </label>
+      <label class="lang-btn" onclick="pick('hi',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🇮🇳</span>
+        <span class="lname">Hindi</span>
+        <span class="lnative">हिंदी</span>
+      </label>
+      <label class="lang-btn" onclick="pick('mr',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🟠</span>
+        <span class="lname">Marathi</span>
+        <span class="lnative">मराठी</span>
+      </label>
+      <label class="lang-btn" onclick="pick('gu',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🟡</span>
+        <span class="lname">Gujarati</span>
+        <span class="lnative">ગુજરાતી</span>
+      </label>
+      <label class="lang-btn" onclick="pick('ta',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🟢</span>
+        <span class="lname">Tamil</span>
+        <span class="lnative">தமிழ்</span>
+      </label>
+      <label class="lang-btn" onclick="pick('te',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🔵</span>
+        <span class="lname">Telugu</span>
+        <span class="lnative">తెలుగు</span>
+      </label>
+      <label class="lang-btn" onclick="pick('bn',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🟤</span>
+        <span class="lname">Bengali</span>
+        <span class="lnative">বাংলা</span>
+      </label>
+      <label class="lang-btn" onclick="pick('kn',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🔴</span>
+        <span class="lname">Kannada</span>
+        <span class="lnative">ಕನ್ನಡ</span>
+      </label>
+      <label class="lang-btn" onclick="pick('pa',this)">
+        <div class="check">✓</div>
+        <span class="lflag">🌾</span>
+        <span class="lname">Punjabi</span>
+        <span class="lnative">ਪੰਜਾਬੀ</span>
+      </label>
+    </div>
+    <button type="submit" class="continue-btn" id="contBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <span id="contTxt">Continue to Login</span>
+    </button>
+  </form>
+
+  <div class="back"><a href="/">← Back to Cover Page</a></div>
+  <div class="note">🌐 The entire platform — nav, buttons, chatbot, and messages — will switch to your selected language.</div>
+</div>
+
+<script>
+const btnLabels={en:'Continue to Login',hi:'लॉगिन जारी रखें',mr:'लॉगिनसाठी पुढे जा',gu:'લૉગિન માટે ચાલુ રાખો',ta:'உள்நுழைவை தொடரவும்',te:'లాగిన్ కొనసాగించండి',bn:'লগইন চালিয়ে যান',kn:'ಲಾಗಿನ್ ಮುಂದುವರಿಸಿ',pa:'ਲੌਗਇਨ ਜਾਰੀ ਰੱਖੋ'};
+function pick(lang,el){
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('langInput').value=lang;
+  document.getElementById('contTxt').textContent=btnLabels[lang]||'Continue to Login';
+}
+</script>
+</body>
+</html>

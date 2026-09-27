@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('report') }}{% endblock %}
+{% block extra_css %}
+<style>
+.rep-grid{display:grid;grid-template-columns:1fr 340px;gap:1.75rem;align-items:start;}
+.upload-zone{border:2.5px dashed var(--border);border-radius:var(--radius);padding:2.5rem 2rem;text-align:center;cursor:pointer;transition:all 0.25s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:rgba(0,200,150,0.03);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;}
+#prevImg{width:100%;border-radius:12px;margin-top:1rem;display:none;max-height:260px;object-fit:cover;}
+.ai-box{background:linear-gradient(135deg,#0A1628,#0D1E35);border:1px solid rgba(0,200,150,0.2);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;display:none;}
+.ai-lbl{font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
+.ai-val{font-family:'Outfit',sans-serif;font-size:1.3rem;font-weight:800;}
+.cbar-wrap{height:5px;background:rgba(255,255,255,0.08);border-radius:100px;margin-top:5px;overflow:hidden;}
+.cbar-fill{height:100%;background:var(--green);border-radius:100px;transition:width 1s ease;}
+.auto-pri{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xs);margin-top:9px;background:rgba(255,255,255,0.03);}
+.ap-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dept-badge{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xs);padding:10px 12px;margin-top:8px;}
+.di{width:32px;height:32px;border-radius:8px;background:rgba(0,200,150,0.15);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.voice-box{background:linear-gradient(135deg,rgba(74,124,255,0.07),rgba(124,92,252,0.04));border:1.5px solid rgba(74,124,255,0.18);border-radius:var(--radius);padding:1.25rem;}
+.voice-btn{width:100%;padding:11px;border-radius:100px;background:var(--blue);color:white;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.9rem;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0;transition:all 0.2s;}
+.voice-btn:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.voice-btn.rec{background:var(--red);animation:vbPulse 1s ease-in-out infinite;}
+@keyframes vbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02);box-shadow:0 8px 28px rgba(255,69,96,0.35);}}
+.waves{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;margin:4px 0;opacity:0;transition:opacity 0.3s;}
+.waves.on{opacity:1;}
+.wb{width:3px;border-radius:100px;background:var(--red);}
+#mapPicker{height:220px;border-radius:var(--radius);overflow:hidden;border:1.5px solid var(--border);}
+.success-box{background:linear-gradient(135deg,var(--green3),rgba(0,200,150,0.05));border:1.5px solid rgba(0,200,150,0.25);border-radius:var(--radius);padding:2rem;text-align:center;display:none;}
+.ticket-id{font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:900;color:var(--green2);background:var(--green3);padding:10px 20px;border-radius:var(--radius-sm);display:inline-block;margin:0.75rem 0;letter-spacing:0.06em;}
+@media(max-width:900px){.rep-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page-wrap">
+  <div style="margin-bottom:2rem;">
+    <div class="stag"><i class="fas fa-exclamation-circle"></i> {{ t('report') }}</div>
+    <h1 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;margin-bottom:4px;">{{ t('report') }}</h1>
+    <p style="color:var(--ink3);">{{ t('upload') }} — {{ t('ai_detect') }} & sets priority automatically</p>
+  </div>
+
+  <form id="repForm">
+  <div class="rep-grid">
+    <!-- LEFT -->
+    <div>
+      <!-- 1. IMAGE -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:1rem;"><i class="fas fa-camera" style="color:var(--green);margin-right:8px;"></i>{{ t('upload') }}</h4>
+        <div class="upload-zone" id="upZone" ondrop="doDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+          <input type="file" id="imgIn" accept="image/*" onchange="onImg(this)">
+          <div id="upPrompt">
+            <div style="font-size:2.2rem;margin-bottom:0.6rem;">📸</div>
+            <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">Drop photo here or click to browse</div>
+            <div style="font-size:0.85rem;color:var(--ink3);">{{ t('ai_detect') }} · JPG, PNG up to 16MB</div>
+          </div>
+          <img id="prevImg">
+        </div>
+        <div class="ai-box" id="aiBox">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:10px;">
+            <div><div class="ai-lbl">Issue Detected</div><div class="ai-val" id="aiType" style="color:var(--green);">—</div></div>
+            <div><div class="ai-lbl">AI Confidence</div><div class="ai-val" id="aiConf" style="color:var(--blue);">—</div><div class="cbar-wrap"><div class="cbar-fill" id="cFill" style="width:0;"></div></div></div>
+          </div>
+          <div class="auto-pri">
+            <div class="ap-dot" id="apDot"></div>
+            <div style="flex:1;"><div style="font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;">Auto Priority</div><div style="font-weight:800;font-size:0.9rem;" id="apVal">—</div></div>
+            <div style="font-size:0.68rem;color:rgba(255,255,255,0.25);">Set by AI</div>
+          </div>
+          <div class="dept-badge"><div class="di">🏢</div><div><div style="font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;">Routed to</div><div style="font-weight:700;font-size:0.9rem;color:white;" id="aiDept">—</div></div></div>
+        </div>
+        <input type="hidden" id="priHidden" name="priority" value="medium">
+        <input type="hidden" id="typeHidden" name="issue_type" value="general">
+      </div>
+
+      <!-- 2. VOICE -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;"><i class="fas fa-microphone-lines" style="color:var(--blue);margin-right:8px;"></i>{{ t('voice') }}</h4>
+        <p style="font-size:0.85rem;color:var(--ink3);margin-bottom:0.9rem;">Speak your description — NagarCare transcribes it automatically in your language.</p>
+        <div class="voice-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:0.88rem;font-weight:700;color:var(--blue);">Voice Assistant</span>
+            <span style="font-size:0.74rem;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--blue2);color:var(--blue);" id="vStat">Ready</span>
+          </div>
+          <button type="button" class="voice-btn" id="vBtn" onclick="toggleVoice()">
+            <i class="fas fa-microphone" id="vIco"></i><span id="vTxt">Start Voice Input</span>
+          </button>
+          <div class="waves" id="vWaves">
+            <div class="wb" style="height:5px;animation:wv .7s 0s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:13px;animation:wv .7s .1s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:20px;animation:wv .7s .15s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:13px;animation:wv .7s .2s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:7px;animation:wv .7s .25s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:17px;animation:wv .7s .12s ease-in-out infinite alternate;"></div>
+            <div class="wb" style="height:9px;animation:wv .7s .3s ease-in-out infinite alternate;"></div>
+          </div>
+          <style>@keyframes wv{from{transform:scaleY(.25)}to{transform:scaleY(1)}}</style>
+          <div style="font-size:0.78rem;color:var(--ink3);text-align:center;" id="vHint">Click to start recording</div>
+          <div style="display:none;font-size:0.75rem;color:var(--amber);text-align:center;margin-top:5px;padding:6px;background:var(--amber2);border-radius:8px;" id="noSpeech">Voice not supported in this browser. Use Chrome or Edge.</div>
+        </div>
+        <div class="fg" style="margin-top:1rem;margin-bottom:0;">
+          <label>{{ t('description') }} <span style="font-weight:400;color:var(--ink3);">(auto-filled by voice or type manually)</span></label>
+          <textarea id="desc" name="description" placeholder="Describe the issue..."></textarea>
+        </div>
+      </div>
+
+      <!-- 3. LOCATION -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.9rem;"><i class="fas fa-map-marker-alt" style="color:var(--red);margin-right:8px;"></i>{{ t('location') }}</h4>
+        <div id="mapPicker"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.9rem;">
+          <div class="fg" style="margin:0;"><label>Latitude</label><input type="text" id="lat" name="latitude" readonly placeholder="Click map / GPS"></div>
+          <div class="fg" style="margin:0;"><label>Longitude</label><input type="text" id="lng" name="longitude" readonly></div>
+        </div>
+        <div class="fg" style="margin-top:0.9rem;margin-bottom:0;"><label>Address</label><input type="text" id="addr" name="address" placeholder="Auto-filled or type address"></div>
+        <button type="button" class="btn btn-outline btn-sm" style="margin-top:0.75rem;" onclick="getGPS()"><i class="fas fa-crosshairs"></i> {{ t('use_gps') }}</button>
+      </div>
+
+      <!-- 4. ISSUE TYPE -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.9rem;"><i class="fas fa-tags" style="color:var(--purple);margin-right:8px;"></i>Issue Type <span style="font-size:0.75rem;font-weight:400;color:var(--ink3);">(AI auto-detects from photo)</span></h4>
+        <select id="issueSelect" onchange="onIssueChange(this.value)" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-family:'Space Grotesk',sans-serif;font-size:0.9rem;outline:none;">
+          <option value="general">— AI will detect automatically from photo —</option>
+          <option value="pothole">🕳️ Pothole / Road Damage</option>
+          <option value="garbage">🗑️ Garbage / Waste Dump</option>
+          <option value="streetlight">💡 Broken Street Light</option>
+          <option value="water_leakage">💧 Water Leakage / Pipe Burst</option>
+          <option value="sewage">🚰 Sewage / Drain Overflow</option>
+          <option value="damaged_tree">🌳 Fallen / Damaged Tree</option>
+          <option value="illegal_construction">🏗️ Illegal Construction</option>
+          <option value="graffiti">🎨 Graffiti / Vandalism</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn btn-primary" style="width:100%;padding:15px;font-size:1rem;border-radius:100px;" onclick="doSubmit()">
+        <i class="fas fa-paper-plane"></i> {{ t('submit_btn') }}
+      </button>
+
+      <div class="success-box" id="succBox">
+        <div style="font-size:3rem;margin-bottom:0.75rem;">🎉</div>
+        <h3 style="font-family:'Outfit',sans-serif;font-size:1.5rem;font-weight:900;margin-bottom:4px;">Complaint Submitted!</h3>
+        <p style="color:var(--ink3);font-size:0.88rem;margin-bottom:0.75rem;">{{ t('ticket') }}</p>
+        <div class="ticket-id" id="ticketDisp">—</div>
+        <p style="color:var(--ink3);font-size:0.85rem;margin-bottom:1.25rem;">{{ t('earned') }} 🏆</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <a id="trackLink" href="#" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Track Complaint</a>
+          <button type="button" class="btn btn-outline btn-sm" onclick="resetForm()"><i class="fas fa-plus"></i> New Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;"><i class="fas fa-wifi-slash" style="color:var(--amber);margin-right:7px;"></i>Offline Queue</h4>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:0.84rem;color:var(--ink3);">Network Status</span>
+          <span class="chip chip-green" id="netStat">Online</span>
+        </div>
+        <div style="padding:9px;background:var(--bg);border-radius:var(--radius-xs);text-align:center;font-size:0.83rem;color:var(--ink3);margin-bottom:8px;" id="queueInfo">No pending reports</div>
+        <button class="btn btn-outline btn-sm" style="width:100%;" onclick="syncOff()"><i class="fas fa-sync"></i> Sync Now</button>
+      </div>
+
+      <div class="card" style="background:linear-gradient(135deg,rgba(74,124,255,0.05),rgba(124,92,252,0.03));border-color:rgba(74,124,255,0.15);">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;color:var(--blue);"><i class="fas fa-microphone"></i> Voice Tips</h4>
+        <ul style="color:var(--ink3);font-size:0.83rem;line-height:2.1;padding-left:1.2rem;">
+          <li>Speak clearly in a quiet space</li>
+          <li>Works in your selected language</li>
+          <li>Example: "Large pothole near market"</li>
+          <li>Edit transcription if needed</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;"><i class="fas fa-brain" style="color:var(--purple);margin-right:7px;"></i>AI Priority Logic</h4>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;">
+          <div style="padding:8px 10px;background:var(--red2);border-radius:var(--radius-xs);border-left:3px solid var(--red);border-top-left-radius:0;border-bottom-left-radius:0;">🔴 <strong>High</strong> — Pothole, water burst, sewage</div>
+          <div style="padding:8px 10px;background:var(--amber2);border-radius:var(--radius-xs);border-left:3px solid var(--amber);border-top-left-radius:0;border-bottom-left-radius:0;">🟡 <strong>Medium</strong> — Garbage, streetlight, tree</div>
+          <div style="padding:8px 10px;background:var(--green3);border-radius:var(--radius-xs);border-left:3px solid var(--green);border-top-left-radius:0;border-bottom-left-radius:0;">🟢 <strong>Low</strong> — Graffiti, aesthetic issues</div>
+        </div>
+        <p style="font-size:0.76rem;color:var(--ink3);margin-top:8px;">Boosted if near hospital, school or highway.</p>
+      </div>
+
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;"><i class="fas fa-route" style="color:var(--blue);margin-right:7px;"></i>Smart Routing</h4>
+        {% for ico,iss,dept in [('🕳️','Pothole','Public Works'),('🗑️','Garbage','Municipal Corp'),('💡','Streetlight','Electricity Board'),('💧','Water Leak','Water Dept'),('🚰','Sewage','Sanitation Board')] %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;background:var(--bg);border-radius:var(--radius-xs);margin-bottom:5px;font-size:0.8rem;">
+          <span>{{ ico }} {{ iss }}</span><span style="color:var(--ink3);">→ {{ dept }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  </form>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% block extra_js %}
+<script>
+// MAP
+const map=L.map('mapPicker').setView([19.8762,75.3433],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+let mk;
+map.on('click',e=>{
+  document.getElementById('lat').value=e.latlng.lat.toFixed(7);
+  document.getElementById('lng').value=e.latlng.lng.toFixed(7);
+  if(mk)mk.remove();mk=L.marker(e.latlng).addTo(map);
+  document.getElementById('addr').value=e.latlng.lat.toFixed(4)+'°N, '+e.latlng.lng.toFixed(4)+'°E';
+});
+function getGPS(){if(!navigator.geolocation)return showToast('Geolocation not supported');
+  navigator.geolocation.getCurrentPosition(p=>{
+    document.getElementById('lat').value=p.coords.latitude.toFixed(7);
+    document.getElementById('lng').value=p.coords.longitude.toFixed(7);
+    document.getElementById('addr').value=p.coords.latitude.toFixed(4)+'°N, '+p.coords.longitude.toFixed(4)+'°E';
+    map.setView([p.coords.latitude,p.coords.longitude],16);
+    if(mk)mk.remove();mk=L.marker([p.coords.latitude,p.coords.longitude]).addTo(map);
+    showToast('📍 Location captured!');
+  },()=>showToast('Could not get location'));
+}
+
+// IMAGE
+function doDrop(e){e.preventDefault();document.getElementById('upZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))processImg(f);}
+function onImg(i){if(i.files[0])processImg(i.files[0]);}
+async function processImg(f){
+  const r=new FileReader();r.onload=e=>{document.getElementById('prevImg').src=e.target.result;document.getElementById('prevImg').style.display='block';document.getElementById('upPrompt').style.display='none';};r.readAsDataURL(f);
+  const fd=new FormData();fd.append('image',f);
+  showToast('🤖 AI analyzing image...');
+  try{const res=await fetch('/api/detect',{method:'POST',body:fd});const d=await res.json();showAI(d);}
+  catch{showToast('⚠️ AI unavailable — select issue type manually');}
+}
+const LABELS={pothole:'Pothole / Road Damage',garbage:'Garbage Dump',streetlight:'Streetlight Issue',water_leakage:'Water Leakage',sewage:'Sewage Overflow',damaged_tree:'Fallen Tree',graffiti:'Graffiti',general:'General Issue'};
+const PCOLS={high:'var(--red)',medium:'var(--amber)',low:'var(--green)',critical:'var(--purple)'};
+function showAI(d){
+  document.getElementById('aiType').textContent=LABELS[d.issue_type]||d.issue_type;
+  document.getElementById('aiConf').textContent=d.confidence+'%';
+  document.getElementById('cFill').style.width=d.confidence+'%';
+  document.getElementById('aiDept').textContent=d.department;
+  const pc=PCOLS[d.priority]||'var(--amber)';
+  document.getElementById('apDot').style.background=pc;
+  document.getElementById('apVal').textContent=d.priority.charAt(0).toUpperCase()+d.priority.slice(1);
+  document.getElementById('apVal').style.color=pc;
+  document.getElementById('priHidden').value=d.priority;
+  document.getElementById('typeHidden').value=d.issue_type;
+  document.getElementById('issueSelect').value=d.issue_type;
+  document.getElementById('aiBox').style.display='block';
+  showToast('✅ AI: '+LABELS[d.issue_type]+' · '+d.priority.toUpperCase()+' priority ('+d.confidence+'%)');
+}
+const PDEPTS={pothole:'Public Works Department',garbage:'Municipal Corporation',streetlight:'Electricity Board',water_leakage:'Water Supply Department',sewage:'Sewage & Sanitation Board',damaged_tree:'Horticulture Department',graffiti:'Urban Aesthetics Cell',general:'Municipal Corporation'};
+const PPRIS={pothole:'high',water_leakage:'high',sewage:'high',garbage:'medium',streetlight:'medium',damaged_tree:'medium',graffiti:'low',general:'medium'};
+function onIssueChange(v){document.getElementById('typeHidden').value=v;document.getElementById('priHidden').value=PPRIS[v]||'medium';}
+
+// VOICE
+let recog=null,isRec=false;
+function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('noSpeech').style.display='block';document.getElementById('vBtn').disabled=true;return null;}
+  const r=new SR();r.continuous=false;r.interimResults=true;
+  const lm={'en':'en-IN','hi':'hi-IN','mr':'mr-IN','gu':'gu-IN','ta':'ta-IN','te':'te-IN','bn':'bn-IN','kn':'kn-IN','pa':'pa-IN'};
+  const lang=document.documentElement.lang||'en';r.lang=lm[lang]||'en-IN';
+  r.onresult=e=>{let txt='';for(let i=e.resultIndex;i<e.results.length;i++)txt+=e.results[i][0].transcript;document.getElementById('desc').value=txt;if(e.results[e.resultIndex].isFinal){setVSt('done');showToast('🎙️ Transcribed!');}};
+  r.onerror=e=>{setVSt('idle');showToast('Voice error: '+e.error);};
+  r.onend=()=>{isRec=false;if(document.getElementById('vStat').textContent==='Listening...')setVSt('idle');};
+  return r;
+}
+function toggleVoice(){
+  if(!recog)recog=initVoice();if(!recog)return;
+  if(isRec){recog.stop();isRec=false;setVSt('idle');}
+  else{recog.start();isRec=true;setVSt('listening');}
+}
+function setVSt(s){
+  const st={'idle':{cls:'',ico:'fas fa-microphone',txt:'Start Voice Input',wv:'',sc:'Ready',sh:'Click to start recording'},'listening':{cls:'rec',ico:'fas fa-stop',txt:'Stop Recording',wv:'on',sc:'Listening...',sh:'Speak now — transcribing...'},'done':{cls:'',ico:'fas fa-check-circle',txt:'Record Again',wv:'',sc:'Done ✓',sh:'Transcription complete! Edit if needed.'}};
+  const c=st[s]||st.idle;
+  document.getElementById('vBtn').className='voice-btn '+c.cls;
+  document.getElementById('vIco').className=c.ico;
+  document.getElementById('vTxt').textContent=c.txt;
+  document.getElementById('vWaves').className='waves '+c.wv;
+  document.getElementById('vStat').textContent=c.sc;
+  document.getElementById('vHint').textContent=c.sh;
+}
+
+// SUBMIT
+async function doSubmit(){
+  const lat=document.getElementById('lat').value,lng=document.getElementById('lng').value;
+  if(!lat||!lng){showToast('📍 Please select location on map or use GPS');return;}
+  const fd=new FormData();
+  const f=document.getElementById('imgIn').files[0];
+  if(f)fd.append('image',f);
+  fd.append('latitude',lat);fd.append('longitude',lng);
+  fd.append('address',document.getElementById('addr').value);
+  fd.append('description',document.getElementById('desc').value);
+  fd.append('issue_type',document.getElementById('typeHidden').value||document.getElementById('issueSelect').value);
+  fd.append('priority',document.getElementById('priHidden').value);
+  if(!navigator.onLine){saveOff({lat,lng,address:document.getElementById('addr').value,issue_type:document.getElementById('typeHidden').value,description:document.getElementById('desc').value,priority:document.getElementById('priHidden').value});showToast('📶 Saved offline — will sync when connected');return;}
+  try{
+    const res=await fetch('/report',{method:'POST',body:fd});
+    const d=await res.json();
+    if(d.success){
+      document.getElementById('repForm').style.display='none';
+      const sb=document.getElementById('succBox');sb.style.display='block';
+      document.getElementById('ticketDisp').textContent=d.ticket_id;
+      document.getElementById('trackLink').href='/track/'+d.ticket_id;
+      if(d.duplicate){document.querySelector('#succBox h3').textContent='Report Merged!';}
+    }else{showToast('❌ Error: '+(d.error||'Submission failed'));}
+  }catch(e){showToast('❌ Network error — saved offline');saveOff({lat,lng});}
+}
+function resetForm(){document.getElementById('repForm').style.display='block';document.getElementById('succBox').style.display='none';document.getElementById('repForm').reset();document.getElementById('prevImg').style.display='none';document.getElementById('upPrompt').style.display='block';document.getElementById('aiBox').style.display='none';}
+
+// OFFLINE
+function saveOff(d){const q=JSON.parse(localStorage.getItem('nc_q')||'[]');q.push({...d,ts:Date.now()});localStorage.setItem('nc_q',JSON.stringify(q));updQ();}
+function updQ(){const q=JSON.parse(localStorage.getItem('nc_q')||'[]');document.getElementById('queueInfo').innerHTML=q.length?`<strong style="color:var(--amber)">${q.length} report(s) pending sync</strong>`:'No pending reports';}
+async function syncOff(){const q=JSON.parse(localStorage.getItem('nc_q')||'[]');if(!q.length){showToast('Nothing to sync');return;}if(!navigator.onLine){showToast('Still offline');return;}try{const r=await fetch('/api/offline-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({complaints:q})});const d=await r.json();localStorage.removeItem('nc_q');updQ();showToast('✅ Synced '+d.synced+' reports');}catch{showToast('Sync failed');}}
+window.addEventListener('online',()=>{document.getElementById('netStat').textContent='Online';document.getElementById('netStat').className='chip chip-green';});
+window.addEventListener('offline',()=>{document.getElementById('netStat').textContent='Offline';document.getElementById('netStat').className='chip chip-amber';});
+updQ();
+</script>
+{% endblock %}
+{% endblock %}

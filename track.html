@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% block title %}Track Complaint{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline { position: relative; padding-left: 2.5rem; }
+.timeline::before {
+  content: ''; position: absolute;
+  left: 10px; top: 8px; bottom: 8px;
+  width: 2px; background: var(--border);
+}
+.tl-item { position: relative; margin-bottom: 1.5rem; }
+.tl-item::before {
+  content: ''; position: absolute;
+  left: -2.5rem; top: 5px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: white; z-index: 1;
+}
+.tl-item.done::before   { background: var(--green); border-color: var(--green); }
+.tl-item.active::before { background: var(--blue);  border-color: var(--blue);  box-shadow: 0 0 0 4px rgba(74,124,255,0.15); }
+
+.prog-steps { display: flex; justify-content: space-between; position: relative; margin: 1.75rem 0; }
+.prog-steps::before {
+  content: ''; position: absolute;
+  top: 19px; left: 8%; right: 8%;
+  height: 3px; background: var(--border);
+}
+.prog-fill {
+  position: absolute; top: 19px; left: 8%;
+  height: 3px; background: var(--green);
+  transition: width 1s ease;
+}
+.prog-step  { display: flex; flex-direction: column; align-items: center; gap: 7px; z-index: 1; flex: 1; }
+.prog-circ  {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 2.5px solid var(--border); background: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; transition: all 0.3s;
+}
+.prog-circ.done { background: var(--green); border-color: var(--green); color: white; }
+.prog-circ.now  { background: var(--blue);  border-color: var(--blue);  color: white; box-shadow: 0 0 0 5px rgba(74,124,255,0.15); }
+.prog-lab  { font-size: 0.72rem; font-weight: 700; color: var(--ink3); text-align: center; }
+.prog-step.done .prog-lab { color: var(--green2); }
+.prog-step.now  .prog-lab { color: var(--blue); }
+
+@media(max-width: 900px) {
+  .track-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page-wrap">
+  <div style="margin-bottom:2rem;">
+    <div class="stag"><i class="fas fa-satellite-dish"></i> Track Complaint</div>
+  </div>
+
+  {# ── CASE 1: no ticket ID in URL ── #}
+  {% if not ticket_id %}
+  <div class="card" style="max-width:500px;margin:0 auto;text-align:center;padding:3rem;">
+    <div style="font-size:3rem;margin-bottom:1rem;">🔍</div>
+    <h2 style="font-family:'Outfit',sans-serif;font-size:1.5rem;font-weight:900;margin-bottom:0.5rem;">Track Your Complaint</h2>
+    <p style="color:var(--ink3);margin-bottom:1.5rem;">Enter your Ticket ID to see live status</p>
+    <input
+      type="text" id="tidIn"
+      placeholder="e.g. NC20240101001"
+      style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+             font-family:'Space Grotesk',sans-serif;outline:none;margin-bottom:10px;
+             text-align:center;font-size:1rem;letter-spacing:0.05em;"
+    >
+    <button
+      class="btn btn-primary" style="width:100%;"
+      onclick="var v=document.getElementById('tidIn').value.trim();if(v)window.location='/track/'+v;"
+    >
+      <i class="fas fa-search"></i> Track Complaint
+    </button>
+  </div>
+
+  {# ── CASE 2: ticket ID given but not found ── #}
+  {% elif not complaint %}
+  <div class="card" style="max-width:500px;margin:0 auto;text-align:center;padding:3rem;">
+    <div style="font-size:3rem;margin-bottom:1rem;">&#10060;</div>
+    <h2 style="font-family:'Outfit',sans-serif;font-weight:900;margin-bottom:0.5rem;">Ticket Not Found</h2>
+    <p style="color:var(--ink3);margin-bottom:1.5rem;">
+      No complaint found for
+      <code style="color:var(--green2);background:var(--green3);padding:2px 8px;border-radius:5px;">{{ ticket_id }}</code>
+    </p>
+    <a href="/track" class="btn btn-primary btn-sm">Try Again</a>
+  </div>
+
+  {# ── CASE 3: complaint found ── #}
+  {% else %}
+
+  {# FIX: define stage lists and index without enumerate() — Jinja2 doesn't support enumerate() #}
+  {% set STAGES = ['submitted', 'assigned', 'in_progress', 'resolved'] %}
+
+  {# FIX: safe index lookup — check membership first #}
+  {% if complaint[10] in STAGES %}
+    {% set cur_idx = STAGES.index(complaint[10]) %}
+  {% else %}
+    {% set cur_idx = 0 %}
+  {% endif %}
+
+  {# Percentage fills for progress bar #}
+  {% if cur_idx == 0 %}{% set fill_pct = 0 %}
+  {% elif cur_idx == 1 %}{% set fill_pct = 33 %}
+  {% elif cur_idx == 2 %}{% set fill_pct = 66 %}
+  {% else %}{% set fill_pct = 100 %}{% endif %}
+
+  <div class="track-grid" style="display:grid;grid-template-columns:1fr 350px;gap:1.75rem;align-items:start;">
+
+    <!-- LEFT: main content -->
+    <div>
+      <!-- Ticket Header Card -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Ticket ID</div>
+            <h2 style="font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:900;color:var(--green2);">
+              {{ complaint[1] }}
+            </h2>
+          </div>
+          <span class="s-{{ complaint[10] }}" style="font-size:0.88rem;padding:8px 18px;">
+            {{ complaint[10] | replace('_',' ') | title }}
+          </span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:3px;">Issue</div>
+            <strong>{{ complaint[2] | replace('_',' ') | title }}</strong>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:3px;">Priority</div>
+            <span class="p-{{ complaint[8] }}">{{ complaint[8] | title }}</span>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:3px;">Department</div>
+            <span style="font-size:0.85rem;font-weight:600;">{{ complaint[9] }}</span>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:3px;">Filed On</div>
+            <span style="font-size:0.85rem;">{{ complaint[11] | safe_date('%d %b %Y') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar Card -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;margin-bottom:0.25rem;">
+          <i class="fas fa-tasks" style="color:var(--green);margin-right:8px;"></i>Progress
+        </h3>
+        <div class="prog-steps">
+          <div class="prog-fill" style="width:{{ fill_pct }}%;"></div>
+
+          {# FIX: no enumerate() — use hardcoded index checks instead #}
+          {% set step_labels = ['Submitted', 'Assigned', 'In Progress', 'Resolved'] %}
+          {% set step_icons  = ['📋', '🏢', '⚙️', '✅'] %}
+
+          {% for step_i in range(4) %}
+            {% if step_i < cur_idx %}
+              {% set step_cls = 'done' %}
+            {% elif step_i == cur_idx %}
+              {% set step_cls = 'now' %}
+            {% else %}
+              {% set step_cls = '' %}
+            {% endif %}
+            <div class="prog-step {{ step_cls }}">
+              <div class="prog-circ {{ step_cls }}">{{ step_icons[step_i] }}</div>
+              <div class="prog-lab">{{ step_labels[step_i] }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Timeline Card -->
+      <div class="card">
+        <h3 style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;margin-bottom:1.25rem;">
+          <i class="fas fa-history" style="color:var(--blue);margin-right:8px;"></i>Activity Timeline
+        </h3>
+        <div class="timeline">
+          {% for tl in timeline %}
+          <div class="tl-item {{ 'done' if loop.index < timeline | length else 'active' }}">
+            <div style="font-weight:700;font-size:0.9rem;margin-bottom:2px;">
+              {{ tl[2] | replace('_',' ') | title }}
+            </div>
+            <div style="font-size:0.85rem;color:var(--ink3);">{{ tl[3] }}</div>
+            {% if tl[4] %}
+              <div style="font-size:0.8rem;color:var(--ink3);">&#128100; {{ tl[4] }}</div>
+            {% endif %}
+            <div style="font-size:0.76rem;color:var(--ink3);margin-top:3px;">
+              {{ tl[5] | safe_date('%d %b %Y') }}
+            </div>
+          </div>
+          {% endfor %}
+          {% if not timeline %}
+          <div style="color:var(--ink3);font-size:0.88rem;">No activity yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Sidebar -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+      {% if complaint[7] %}
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;">
+          <i class="fas fa-image" style="color:var(--blue);margin-right:7px;"></i>Submitted Photo
+        </h4>
+        <img
+          src="/{{ complaint[7] }}"
+          style="width:100%;border-radius:var(--radius-sm);display:block;"
+          onerror="this.parentElement.style.display='none'"
+        >
+      </div>
+      {% endif %}
+
+      {% if complaint[4] and complaint[5] %}
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;">
+          <i class="fas fa-map-marker-alt" style="color:var(--red);margin-right:7px;"></i>Location
+        </h4>
+        <!-- FIX: give the div a unique id to avoid Leaflet conflicts on page re-render -->
+        <div id="track-minimap" style="height:160px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);"></div>
+        <p style="font-size:0.82rem;color:var(--ink3);margin-top:7px;">{{ complaint[6] or 'Location recorded' }}</p>
+      </div>
+      {% endif %}
+
+      {% if complaint[10] != 'resolved' %}
+      <div class="card" style="background:var(--amber2);border-color:rgba(255,176,32,0.25);">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:5px;color:#B07800;">
+          <i class="fas fa-clock"></i> Estimated Resolution
+        </h4>
+        {% if complaint[8] == 'high' %}
+          <p style="font-weight:700;font-size:1rem;color:#B07800;">24–48 hours</p>
+        {% elif complaint[8] == 'low' %}
+          <p style="font-weight:700;font-size:1rem;color:#B07800;">7–10 days</p>
+        {% else %}
+          <p style="font-weight:700;font-size:1rem;color:#B07800;">3–5 days</p>
+        {% endif %}
+        <p style="font-size:0.8rem;color:#B07800;opacity:0.7;margin-top:3px;">Based on priority &amp; issue type</p>
+      </div>
+      {% else %}
+      <div class="card" style="background:var(--green3);border-color:rgba(0,200,150,0.25);text-align:center;padding:2rem;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">&#127881;</div>
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;color:var(--green2);margin-bottom:4px;">Issue Resolved!</h4>
+        <p style="font-size:0.84rem;color:var(--green2);opacity:0.8;">Thank you for reporting. You earned +10 points!</p>
+      </div>
+      {% endif %}
+
+      <!-- Quick Track Another -->
+      <div class="card">
+        <h4 style="font-family:'Outfit',sans-serif;font-weight:800;margin-bottom:0.75rem;font-size:0.9rem;">
+          <i class="fas fa-search" style="color:var(--blue);margin-right:7px;"></i>Track Another
+        </h4>
+        <input
+          type="text" id="anotherTid"
+          placeholder="Enter Ticket ID..."
+          style="width:100%;padding:9px 12px;border:1.5px solid var(--border);
+                 border-radius:var(--radius-sm);font-family:'Space Grotesk',sans-serif;
+                 outline:none;margin-bottom:8px;font-size:0.88rem;"
+        >
+        <button
+          class="btn btn-blue btn-sm" style="width:100%;"
+          onclick="var v=document.getElementById('anotherTid').value.trim();if(v)window.location='/track/'+v;"
+        >
+          <i class="fas fa-search"></i> Track
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  {# FIX: Leaflet map — load CSS/JS only when needed, use unique map variable name #}
+  {% if complaint[4] and complaint[5] %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // FIX: use try/catch and unique variable name 'trackMap' to avoid conflicts
+    try {
+      var trackLat = {{ complaint[4] | float }};
+      var trackLng = {{ complaint[5] | float }};
+      var trackMap = L.map('track-minimap').setView([trackLat, trackLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&#169; OpenStreetMap'
+      }).addTo(trackMap);
+      L.marker([trackLat, trackLng]).addTo(trackMap);
+    } catch(e) {
+      document.getElementById('track-minimap').innerHTML = '<p style="padding:1rem;color:#888;font-size:0.85rem;">Map unavailable</p>';
+    }
+  </script>
+  {% endif %}
+
+  {% endif %}{# end complaint found #}
+</div>
+{% endblock %}

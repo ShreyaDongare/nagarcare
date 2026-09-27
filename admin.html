@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block extra_css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+.chart-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.chart-card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;}
+.chart-card h4{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:800;margin-bottom:1rem;color:var(--ink3);}
+.dp-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+.dp-name{font-size:0.8rem;font-weight:600;min-width:160px;color:var(--ink2);}
+.dp-bar{flex:1;height:7px;background:var(--bg);border-radius:100px;overflow:hidden;}
+.dp-fill{height:100%;border-radius:100px;}
+.dp-time{font-size:0.78rem;color:var(--ink3);min-width:50px;text-align:right;}
+@media(max-width:800px){.chart-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container page-wrap">
+  <div style="margin-bottom:2rem;">
+    <div class="stag"><i class="fas fa-shield-alt"></i> Admin Panel</div>
+    <h1 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;margin-bottom:4px;">Government Analytics Dashboard</h1>
+    <p style="color:var(--ink3);">Real-time insights for policy-making and resource allocation</p>
+  </div>
+
+  <div class="kpi-grid" style="margin-bottom:1.5rem;">
+    <div class="kpi"><div class="kpi-icon" style="background:var(--blue2);color:var(--blue);"><i class="fas fa-file-alt"></i></div><div class="kpi-val">{{ total }}</div><div class="kpi-lab">Total Complaints</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--green3);color:var(--green2);"><i class="fas fa-check-double"></i></div><div class="kpi-val" style="color:var(--green2);">{{ resolved }}</div><div class="kpi-lab">Resolved</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--red2);color:var(--red);"><i class="fas fa-exclamation-triangle"></i></div><div class="kpi-val" style="color:var(--red);">{{ high }}</div><div class="kpi-lab">High Priority</div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--purple2);color:var(--purple);"><i class="fas fa-percentage"></i></div><div class="kpi-val" style="color:var(--purple);">{{ rate }}%</div><div class="kpi-lab">Resolution Rate</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card"><h4><i class="fas fa-chart-pie" style="color:var(--green);margin-right:6px;"></i>Issues by Type</h4><canvas id="typeChart" height="200"></canvas></div>
+    <div class="chart-card"><h4><i class="fas fa-chart-bar" style="color:var(--blue);margin-right:6px;"></i>Status Breakdown</h4><canvas id="statusChart" height="200"></canvas></div>
+    <div class="chart-card"><h4><i class="fas fa-fire" style="color:var(--red);margin-right:6px;"></i>Priority Split</h4><canvas id="priChart" height="200"></canvas></div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;margin-bottom:1.25rem;"><i class="fas fa-building" style="color:var(--amber);margin-right:8px;"></i>Department Performance</h3>
+    <div class="dp-row"><div class="dp-name">Public Works Dept.</div><div class="dp-bar"><div class="dp-fill" style="width:85%;background:var(--green);"></div></div><div class="dp-time">36h avg</div></div>
+    <div class="dp-row"><div class="dp-name">Municipal Corporation</div><div class="dp-bar"><div class="dp-fill" style="width:72%;background:var(--green);"></div></div><div class="dp-time">48h avg</div></div>
+    <div class="dp-row"><div class="dp-name">Electricity Board</div><div class="dp-bar"><div class="dp-fill" style="width:60%;background:var(--amber);"></div></div><div class="dp-time">72h avg</div></div>
+    <div class="dp-row"><div class="dp-name">Water Supply Dept.</div><div class="dp-bar"><div class="dp-fill" style="width:88%;background:var(--green);"></div></div><div class="dp-time">24h avg</div></div>
+    <div class="dp-row"><div class="dp-name">Sanitation Board</div><div class="dp-bar"><div class="dp-fill" style="width:45%;background:var(--red);"></div></div><div class="dp-time">96h avg</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+      <h3 style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;">All Complaints</h3>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="srch" placeholder="Search..." oninput="filterRows(this.value)" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Space Grotesk',sans-serif;font-size:0.85rem;outline:none;width:180px;">
+        <select id="stFlt" onchange="filterRows(document.getElementById('srch').value)" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Space Grotesk',sans-serif;font-size:0.85rem;outline:none;">
+          <option value="">All Status</option>
+          <option value="submitted">Submitted</option>
+          <option value="assigned">Assigned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="data-table" id="adminTbl">
+      <thead><tr><th>Ticket</th><th>Issue</th><th>Priority</th><th>Department</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for c in complaints %}
+      <tr data-status="{{ c[10] }}">
+        <td><code style="font-size:0.78rem;color:var(--green2);background:var(--green3);padding:2px 7px;border-radius:5px;">{{ c[1] }}</code></td>
+        <td><strong>{{ c[2]|replace('_',' ')|title }}</strong></td>
+        <td><span class="p-{{ c[8] }}">{{ c[8]|title }}</span></td>
+        <td style="font-size:0.8rem;color:var(--ink3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c[9] }}</td>
+        <td>
+          <select class="ssel" data-ticket="{{ c[1] }}" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:0.78rem;outline:none;background:var(--bg);">
+            {% for s in ['submitted','assigned','in_progress','resolved','rejected'] %}
+            <option value="{{ s }}" {{ 'selected' if c[10]==s else '' }}>{{ s|replace('_',' ')|title }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td style="font-size:0.8rem;color:var(--ink3);">{{ c[11]|safe_date('%d %b') }}</td>
+        <td><button class="btn btn-primary btn-xs" onclick="updStat('{{ c[1] }}',this)">Update</button></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+const BT=JSON.parse('{{ by_type|safe }}');
+const BS=JSON.parse('{{ by_status|safe }}');
+const BP=JSON.parse('{{ by_pri|safe }}');
+const COLS=['#00C896','#4A7CFF','#FFB020','#FF4560','#7C5CFC','#00A87A'];
+const co={plugins:{legend:{labels:{font:{family:'Space Grotesk'},boxWidth:12}}},responsive:true};
+
+new Chart(document.getElementById('typeChart'),{type:'doughnut',data:{labels:Object.keys(BT).map(k=>k.replace(/_/g,' ')),datasets:[{data:Object.values(BT),backgroundColor:COLS,borderWidth:0,hoverOffset:6}]},options:{...co,cutout:'62%'}});
+new Chart(document.getElementById('statusChart'),{type:'bar',data:{labels:Object.keys(BS).map(k=>k.replace(/_/g,' ')),datasets:[{data:Object.values(BS),backgroundColor:COLS,borderRadius:8,borderSkipped:false}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}});
+new Chart(document.getElementById('priChart'),{type:'pie',data:{labels:['High','Medium','Low'],datasets:[{data:[BP.high||0,BP.medium||0,BP.low||0],backgroundColor:['#FF4560','#FFB020','#00C896'],borderWidth:0}]},options:co});
+
+async function updStat(tid,btn){
+  const row=btn.closest('tr'),sel=row.querySelector('.ssel');
+  const note=prompt('Add update note (optional):')||'Updated by admin';
+  try{const r=await fetch('/api/update-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:tid,status:sel.value,note})});const d=await r.json();if(d.success)showToast('✅ Status updated: '+sel.value.replace(/_/g,' '));else showToast('❌ Error: '+(d.error||'Failed'));}catch{showToast('❌ Network error');}
+}
+function filterRows(q){
+  const st=document.getElementById('stFlt').value;
+  document.querySelectorAll('#adminTbl tbody tr').forEach(r=>{
+    const match=r.textContent.toLowerCase().includes(q.toLowerCase());
+    const stMatch=!st||r.dataset.status===st;
+    r.style.display=match&&stMatch?'':'none';
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

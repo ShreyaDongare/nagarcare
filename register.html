@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% block title %}Register{% endblock %}
+
+{% block extra_css %}
+<style>
+.reg-wrap {
+  min-height: calc(100vh - 62px);
+  display: grid;
+  grid-template-columns: 1fr 480px;
+}
+.reg-left {
+  background: linear-gradient(160deg, #0A1628, #0D1E35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+.reg-left::before {
+  content: '';
+  position: absolute;
+  width: 380px; height: 380px;
+  background: rgba(124,92,252,0.08);
+  border-radius: 50%;
+  top: -80px; right: -80px;
+  filter: blur(80px);
+  pointer-events: none;
+}
+.reg-left::after {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px;
+  background: rgba(0,200,150,0.06);
+  border-radius: 50%;
+  bottom: -40px; left: -40px;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.reg-left-content { position: relative; z-index: 1; width: 100%; max-width: 340px; }
+.reg-logo { display: flex; align-items: center; gap: 11px; margin-bottom: 2rem; }
+.reg-logo-icon {
+  width: 46px; height: 46px; background: var(--green); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  box-shadow: 0 0 28px rgba(0,200,150,0.4);
+}
+.reg-logo-name {
+  font-family: 'Outfit', sans-serif; font-size: 1.9rem; font-weight: 900;
+  background: linear-gradient(135deg, #fff, var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.reg-left h2 {
+  font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900;
+  color: white; margin-bottom: 0.6rem; line-height: 1.15;
+}
+.reg-left h2 span { color: var(--green); }
+.reg-left p { color: rgba(255,255,255,0.48); font-size: 0.93rem; line-height: 1.7; margin-bottom: 1.75rem; }
+
+/* Badge grid */
+.badge-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.badge-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 11px; padding: 11px 12px;
+  display: flex; align-items: center; gap: 9px;
+}
+.badge-item span { font-size: 1.3rem; flex-shrink: 0; }
+.badge-item strong { display: block; font-size: 0.83rem; color: white; font-weight: 700; }
+.badge-item small  { font-size: 0.72rem; color: rgba(255,255,255,0.42); }
+.badge-item.full   { grid-column: span 2; }
+
+/* Right form */
+.reg-right {
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 2.5rem;
+}
+.reg-form { width: 100%; max-width: 380px; }
+
+/* Flash messages */
+.fmsg { padding: 11px 14px; border-radius: 9px; font-size: 0.86rem; font-weight: 600; margin-bottom: 1rem; }
+.fmsg-err { background: var(--red2);   color: var(--red); }
+.fmsg-ok  { background: var(--green3); color: var(--green2); }
+
+/* Password strength bar */
+.pw-wrap  { position: relative; }
+.pw-wrap input { padding-right: 42px; }
+.eye-btn2 {
+  position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--ink3); cursor: pointer; font-size: 0.88rem;
+}
+.str-bar {
+  height: 4px; border-radius: 100px; margin-top: 5px;
+  background: var(--border); overflow: hidden;
+}
+.str-fill { height: 100%; border-radius: 100px; transition: width 0.3s, background 0.3s; }
+
+@media(max-width: 820px) {
+  .reg-wrap { grid-template-columns: 1fr; }
+  .reg-left { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reg-wrap">
+
+  <!-- ═══ LEFT PANEL ═══ -->
+  <div class="reg-left">
+    <div class="reg-left-content">
+      <div class="reg-logo">
+        <div class="reg-logo-icon">🏙️</div>
+        <div class="reg-logo-name">NagarCare</div>
+      </div>
+      <h2>Become a<br><span>Civic Hero</span></h2>
+      <p>Every report you submit makes your city safer and cleaner. Earn badges as you contribute to smarter urban governance!</p>
+
+      <div class="badge-grid">
+        <div class="badge-item">
+          <span>🌱</span>
+          <div><strong>Newcomer</strong><small>0 pts &#8212; Start here</small></div>
+        </div>
+        <div class="badge-item">
+          <span>🥉</span>
+          <div><strong>Bronze</strong><small>5 reports</small></div>
+        </div>
+        <div class="badge-item">
+          <span>🥈</span>
+          <div><strong>Silver</strong><small>10 reports</small></div>
+        </div>
+        <div class="badge-item">
+          <span>🥇</span>
+          <div><strong>Gold</strong><small>20 reports</small></div>
+        </div>
+        <div class="badge-item full">
+          <span>💎</span>
+          <div><strong>Platinum Hero</strong><small>50 reports &#8212; Top citizen!</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <div class="reg-right">
+    <div class="reg-form">
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="fmsg {{ 'fmsg-err' if cat == 'error' else 'fmsg-ok' }}">
+              <i class="fas {{ 'fa-circle-xmark' if cat == 'error' else 'fa-circle-check' }}"></i>
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="stag" style="margin-bottom:1rem;">&#127807; Join NagarCare</div>
+      <h1 style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;margin-bottom:4px;">
+        Create Account
+      </h1>
+      <p style="color:var(--ink3);margin-bottom:1.75rem;font-size:0.9rem;">
+        Join thousands of citizens making their city better
+      </p>
+
+      <form method="POST" action="/register">
+
+        <div class="fg">
+          <label>Full Name <span style="color:var(--red);">*</span></label>
+          <input
+            type="text" name="name" required
+            placeholder="Your full name"
+            autocomplete="name"
+            maxlength="100"
+          >
+        </div>
+
+        <div class="fg">
+          <label>Email Address <span style="color:var(--red);">*</span></label>
+          <input
+            type="email" name="email" required
+            placeholder="you@example.com"
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="fg">
+          <label>Phone Number</label>
+          <input
+            type="tel" name="phone"
+            placeholder="10-digit mobile number"
+            autocomplete="tel"
+            maxlength="15"
+          >
+        </div>
+
+        <div class="fg">
+          <label>Password <span style="color:var(--red);">*</span></label>
+          <div class="pw-wrap">
+            <input
+              type="password" name="password" id="regPwd" required
+              placeholder="Minimum 6 characters"
+              autocomplete="new-password"
+              minlength="6"
+              oninput="checkStrength(this.value)"
+            >
+            <button type="button" class="eye-btn2" onclick="toggleRegPwd()">
+              <i class="fas fa-eye" id="regEye"></i>
+            </button>
+          </div>
+          <!-- Password strength indicator -->
+          <div class="str-bar">
+            <div class="str-fill" id="strFill" style="width:0%;background:var(--red);"></div>
+          </div>
+          <div style="font-size:0.74rem;color:var(--ink3);margin-top:3px;" id="strLabel"></div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          style="width:100%;padding:14px;font-size:1rem;border-radius:100px;justify-content:center;"
+        >
+          <i class="fas fa-rocket"></i> Create Free Account
+        </button>
+
+      </form>
+
+      <p style="text-align:center;font-size:0.88rem;color:var(--ink3);margin-top:1.25rem;">
+        Already have an account?
+        <a href="/login" style="color:var(--green);font-weight:700;text-decoration:none;">Login here</a>
+      </p>
+      <p style="text-align:center;font-size:0.8rem;color:var(--ink3);margin-top:6px;">
+        <a href="/select-language" style="color:var(--ink3);text-decoration:none;">&#127760; Change Language</a>
+      </p>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleRegPwd() {
+  var i = document.getElementById('regPwd');
+  var e = document.getElementById('regEye');
+  if (i.type === 'password') {
+    i.type = 'text';
+    e.className = 'fas fa-eye-slash';
+  } else {
+    i.type = 'password';
+    e.className = 'fas fa-eye';
+  }
+}
+
+function checkStrength(pwd) {
+  var fill  = document.getElementById('strFill');
+  var label = document.getElementById('strLabel');
+  if (!pwd) { fill.style.width = '0%'; label.textContent = ''; return; }
+  var score = 0;
+  if (pwd.length >= 6)  score++;
+  if (pwd.length >= 10) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  var pct   = ['0%', '20%', '40%', '65%', '85%', '100%'][score];
+  var col   = ['', '#FF4560', '#FFB020', '#FFB020', '#00C896', '#00C896'][score];
+  var txt   = ['', 'Too weak', 'Weak', 'Fair', 'Strong', 'Very strong'][score];
+  fill.style.width      = pct;
+  fill.style.background = col;
+  label.textContent     = txt;
+  label.style.color     = col;
+}
+</script>
+{% endblock %}
